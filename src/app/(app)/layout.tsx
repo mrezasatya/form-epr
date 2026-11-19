@@ -21,6 +21,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ...(user.isRecruiter || user.isAdminHr ? [{ href: "/rekrutmen", label: "Dashboard Rekruter", badge: pendingRequests }] : []),
     { href: "/pr", label: user.isRecruiter || user.isAdminHr ? "Semua PR" : user.isKadiv ? "PR Divisi" : "PR Saya" },
     { href: "/approval", label: "Approval", badge: pendingApprovals },
+    ...(user.isRecruiter || user.isAdminHr || user.isKadiv ? [{ href: "/laporan", label: "Laporan" }] : []),
+    ...(user.isAdminHr ? [{ href: "/admin", label: "Admin HR" }] : []),
     { href: "/notifikasi", label: "Notifikasi" },
   ];
 

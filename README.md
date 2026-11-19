@@ -35,6 +35,8 @@ Halaman login menampilkan pilihan akun. Skenario uji yang disarankan:
 | 5 | Adnan (Rekruter) | Dashboard Rekruter → buka PR → isi Prioritas & PIC, tahap, kandidat |
 | 6 | Rudi Hartono | PR Saya → lihat progres, klik status untuk timeline, Ajukan Hold (+memo) |
 | 7 | Adnan | Eksekusi Hold → Unhold → kandidat Joined → Filled → Export Excel |
+| 8 | Adnan | PR yang menunggu approval → Input Approval Kertas (+scan) · Cetak PR · menu Laporan |
+| 9 | Nadia Kusuma (Admin HR) | Admin HR → matriks approval & simulator, divisi, karyawan, hari libur, master data |
 
 ## Perintah
 
@@ -42,7 +44,7 @@ Halaman login menampilkan pilihan akun. Skenario uji yang disarankan:
 |---|---|
 | `npm run dev` | Mode pengembangan |
 | `npm run build && npm start` | Build & jalankan production |
-| `npm test` | Unit test (hari kerja, PR NO, matriks approval) |
+| `npm test` | Unit test (hari kerja, PR NO, matriks approval, rekrutmen, laporan) |
 | `npm run lint` / `npm run typecheck` | Pemeriksaan kode |
 | `npm run db:migrate` | Buat migrasi baru setelah mengubah `prisma/schema.prisma` |
 | `npm run db:reset` | Kosongkan & isi ulang database (hanya dev) |
@@ -52,8 +54,9 @@ Halaman login menampilkan pilihan akun. Skenario uji yang disarankan:
 ```
 prisma/            skema database, migrasi, seed master data
 src/lib/           logika bisnis: approval.ts, prno.ts, dates.ts, pr-service.ts, pr-schema.ts,
-                   recruitment.ts, recruitment-service.ts, recruiter-query.ts, storage.ts
-src/app/(app)/     halaman setelah login: beranda, pr, pr/baru, pr/[id], approval, rekrutmen, notifikasi
+                   recruitment.ts, recruitment-service.ts, recruiter-query.ts, storage.ts, reports.ts, admin-service.ts
+src/app/(app)/     halaman setelah login: beranda, pr, pr/baru, pr/[id], approval, rekrutmen, laporan, admin/*, notifikasi
+src/app/cetak/     halaman Cetak PR (A4, simpan sebagai PDF)
 src/app/api/       health check, export Excel, unduh file memo (dengan cek hak akses)
 src/app/login/     halaman login (mode dummy di prototype)
 src/components/    komponen UI (PrForm, TagInput, ApprovalTimeline, ...)

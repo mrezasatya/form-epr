@@ -241,14 +241,23 @@ async function submitInTx(tx: Tx, user: User, prId: string, today: Date) {
 // Keputusan approver
 // ---------------------------------------------------------------------------
 
+/** Metadata approval kertas (Spec 7.4): diinput rekruter atas nama approver. */
+export type PaperDecision = {
+  signerName: string;
+  signedDate: Date;
+  scanFile: string | null;
+};
+
 export async function decide(
   user: User,
   prId: string,
   decision: "APPROVE" | "REJECT",
   catatan: string,
+  paper?: PaperDecision,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   catatan = catatan.trim().slice(0, 500);
   if (decision === "REJECT" && !catatan) return { ok: false, message: "Alasan penolakan wajib diisi." };
+  if (paper && !user.isRecruiter) return { ok: false, message: "Hanya rekruter yang dapat menginput approval kertas." };
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -258,15 +267,31 @@ export async function decide(
       if (!pr || pr.statusPersetujuan !== "MENUNGGU_APPROVAL" || pr.currentLevel === null)
         throw new BusinessError("PR ini tidak sedang menunggu persetujuan.");
       const step = await tx.prApproval.findUnique({ where: { prId_level: { prId, level: pr.currentLevel } } });
-      if (!step || step.status !== "PENDING" || step.approverNik !== user.nik)
-        throw new BusinessError("Anda bukan approver untuk tahap ini.");
+      if (!step || step.status !== "PENDING") throw new BusinessError("Tahap approval tidak valid.");
+      if (!paper && step.approverNik !== user.nik) throw new BusinessError("Anda bukan approver untuk tahap ini.");
+      if (paper && pr.tanggalPengajuan && paper.signedDate < pr.tanggalPengajuan)
+        throw new BusinessError("Tanggal tanda tangan tidak boleh sebelum Tanggal Pengajuan.");
+      if (paper && paper.signedDate > todayWib()) throw new BusinessError("Tanggal tanda tangan tidak boleh di masa depan.");
 
-      const now = new Date();
       const today = todayWib();
+      const decider = paper ? paper.signerName : user.nama;
+      const paperNote = paper ? `Approval kertas ditandatangani ${paper.signerName}, diinput oleh ${user.nama}` : null;
       await tx.prApproval.update({
         where: { id: step.id },
-        data: { status: decision === "APPROVE" ? "DISETUJUI" : "DITOLAK", tanggal: now, catatan: catatan || null },
+        data: {
+          status: decision === "APPROVE" ? "DISETUJUI" : "DITOLAK",
+          tanggal: paper ? paper.signedDate : new Date(),
+          catatan: catatan || null,
+          ...(paper && { sumber: "KERTAS", approverNama: paper.signerName, scanFile: paper.scanFile }),
+        },
       });
+      const historyBase = {
+        prId,
+        dari: `Menunggu Approval ${step.level}`,
+        olehNik: user.nik,
+        olehNama: user.nama,
+        fileMemo: paper?.scanFile ?? null,
+      };
 
       if (decision === "REJECT") {
         await tx.prApproval.updateMany({
@@ -278,15 +303,7 @@ export async function decide(
           data: { statusPersetujuan: "DITOLAK", currentLevel: null },
         });
         await tx.prStatusHistory.create({
-          data: {
-            prId,
-            aksi: "REJECT",
-            dari: `Menunggu Approval ${step.level}`,
-            ke: "Ditolak",
-            olehNik: user.nik,
-            olehNama: user.nama,
-            alasan: catatan,
-          },
+          data: { ...historyBase, aksi: "REJECT", ke: "Ditolak", alasan: [paperNote, catatan].filter(Boolean).join(". ") },
         });
         const requester = await tx.employee.findUnique({ where: { nik: pr.requesterNik } });
         await notify(tx, {
@@ -294,21 +311,14 @@ export async function decide(
           to: requester,
           jenis: "PR_DITOLAK",
           subjek: `PR ${pr.prNo} ditolak`,
-          isi: `PR ${pr.prNo} (${pr.jobTitle}) ditolak oleh ${user.nama} (Approval ${step.level}).\nAlasan: ${catatan}\n\nAnda dapat membuat PR baru dengan tombol "Duplikat PR".`,
+          isi: `PR ${pr.prNo} (${pr.jobTitle}) ditolak oleh ${decider} (Approval ${step.level}).\nAlasan: ${catatan}\n\nAnda dapat membuat PR baru dengan tombol "Duplikat PR".`,
           path: `/pr/${prId}`,
         });
         return;
       }
 
       await tx.prStatusHistory.create({
-        data: {
-          prId,
-          aksi: "APPROVE",
-          dari: `Menunggu Approval ${step.level}`,
-          olehNik: user.nik,
-          olehNama: user.nama,
-          alasan: catatan || null,
-        },
+        data: { ...historyBase, aksi: "APPROVE", alasan: [paperNote, catatan].filter(Boolean).join(". ") || null },
       });
       const next = await tx.prApproval.findFirst({
         where: { prId, level: { gt: step.level }, status: "MENUNGGU" },
@@ -323,6 +333,31 @@ export async function decide(
       }
     });
     return { ok: true };
+  } catch (e) {
+    if (e instanceof BusinessError) return { ok: false, message: e.message };
+    throw e;
+  }
+}
+
+/** Simulasi matriks approval untuk Admin HR (tanpa menyimpan apa pun). */
+export async function previewApproval(c: {
+  jobLevel: string;
+  divisiKode: string;
+  statusEmployment: string;
+  jenisKebutuhan: string;
+  requesterNik: string;
+}): Promise<
+  | { ok: true; rule: { id: number; nama: string }; steps: ReturnType<typeof planSteps>["steps"] }
+  | { ok: false; message: string }
+> {
+  const rules = await prisma.approvalRule.findMany({ where: { aktif: true } });
+  const rule = selectRule(rules, c);
+  if (!rule) return { ok: false, message: `Tidak ada aturan aktif untuk Job Level "${c.jobLevel}".` };
+  try {
+    const refs = parseApprovers(rule.approvers);
+    const resolved: ResolvedApprover[] = [];
+    for (const [i, ref] of refs.entries()) resolved.push(await resolveApprover(prisma, ref, i + 1, c.divisiKode));
+    return { ok: true, rule: { id: rule.id, nama: rule.nama }, steps: planSteps(resolved, c.requesterNik).steps };
   } catch (e) {
     if (e instanceof BusinessError) return { ok: false, message: e.message };
     throw e;

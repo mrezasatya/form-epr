@@ -24,8 +24,8 @@ Sejak fase pertama, aplikasi dibangun supaya bisa dipindahkan ke server internal
 | **0. Fondasi** | Struktur proyek, skema database (seluruh tabel Lampiran E), data master (Lampiran A–C), data dummy karyawan, login dummy (pilih akun), layout mobile-first, Docker Compose | Aplikasi bisa dijalankan & login sebagai berbagai peran | ✅ Selesai |
 | **1. Form e-PR & Approval** | Form e-PR lengkap + validasi + draft + ringkasan konfirmasi, PR NO otomatis, mesin matriks approval (skip otomatis), kotak masuk approver (setujui/tolak), timeline approval, duplikat PR, perhitungan hari kerja, log notifikasi email (simulasi) | Alur pengajuan → approval berjenjang → PR Received | ✅ Selesai |
 | **2. Monitoring** | Dashboard Rekruter (filter, cari, detail, prioritas, PIC, tahap, kandidat, realisasi, hold/unhold/cancel + memo, Filled), Dashboard User (kartu HP/tabel desktop, versi ringkas), pengajuan Hold/Cancel oleh pemohon, export Excel | Rekruter mengelola PR; pemohon & Kadiv memantau progres | ✅ Selesai |
-| **3. Admin, Laporan & Hybrid** | Panel Admin HR (master data, matriks approval, hari libur, hak pemohon tambahan), laporan & metrik (fulfillment rate, placement time, lama approval, PR terlambat, beban PIC), approval kertas + upload scan, Cetak PR (PDF) | Prototype lengkap untuk validasi HRD & atasan | ⏳ Berikutnya |
-| **4. Production (jaringan internal)** | Login NIK + password ESS (LDAP/API/SSO, atau akun lokal ber-hash), email SMTP perusahaan + pengingat approval tertunda, impor master karyawan, keamanan (HTTPS, rate limit, audit), backup DB, kepatuhan UU PDP, deploy ke server internal | Aplikasi live di jaringan perusahaan | Belum — butuh koordinasi IT |
+| **3. Admin, Laporan & Hybrid** | Panel Admin HR (master data, matriks approval, hari libur, hak pemohon tambahan), laporan & metrik (fulfillment rate, placement time, lama approval, PR terlambat, beban PIC), approval kertas + upload scan, Cetak PR (PDF) | Prototype lengkap untuk validasi HRD & atasan | ✅ Selesai |
+| **4. Production (jaringan internal)** | Login NIK + password ESS (LDAP/API/SSO, atau akun lokal ber-hash), email SMTP perusahaan + pengingat approval tertunda, impor master karyawan, keamanan (HTTPS, rate limit, audit), backup DB, kepatuhan UU PDP, deploy ke server internal | Aplikasi live di jaringan perusahaan | ⏳ Berikutnya — butuh koordinasi IT |
 
 ## Keputusan yang dibutuhkan per fase
 
@@ -36,7 +36,14 @@ Sejak fase pertama, aplikasi dibangun supaya bisa dipindahkan ke server internal
   - Filled boleh dengan Realisasi < Kebutuhan bila rekruter mengisi alasan.
   - Filled dan Cancelled bersifat final (tidak bisa dibuka kembali).
 
-- **Sebelum Fase 3:** matriks approval resmi (#1), daftar hari libur & status Sabtu (#7).
+- **Validasi Fase 3 (asumsi yang dipakai, mohon dikonfirmasi):**
+  - Cetak PR memakai fitur "Simpan sebagai PDF" di browser (tanpa komponen tambahan di server).
+  - Approval kertas diinput rekruter untuk tahap yang sedang menunggu; PR Received Date = tanggal input approval terakhir.
+  - Fulfillment rate dihitung sesuai spesifikasi (termasuk PR Cancelled); versi tanpa Cancelled ditampilkan sebagai pembanding.
+  - Lama approval ditampilkan dalam hari kalender dan hari kerja.
+  - Aturan approval yang sudah dipakai PR tidak bisa dihapus, hanya dinonaktifkan.
+- **Data yang diisi Admin HR lewat panel (tidak perlu menunggu developer):** matriks approval resmi (#1),
+  Kadiv & Direktur pembina untuk 19 divisi yang masih kosong, hari libur 2027 (#7).
 - **Sebelum Fase 4 (dengan IT):** metode login ESS (#3), server email (#9), spesifikasi server/VM, master karyawan (#2), kebijakan penyimpanan data (UU PDP).
 
 Lihat [`DEPLOYMENT.md`](./DEPLOYMENT.md) untuk panduan memindahkan aplikasi ke server internal.

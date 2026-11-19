@@ -294,3 +294,17 @@ model PrActionRequest {
   @@index([prId])
   @@index([status])
 }
+
+/// Audit trail perubahan master data & konfigurasi oleh Admin HR (Spec 13)
+model AuditLog {
+  id        String   @id @default(cuid())
+  entitas   String // EMPLOYEE | DIVISION | APPROVAL_RULE | HOLIDAY | MASTER_*
+  entitasId String
+  aksi      String // CREATE | UPDATE | DELETE
+  data      Json?
+  olehNik   String
+  olehNama  String
+  waktu     DateTime @default(now())
+
+  @@index([entitas, entitasId])
+}

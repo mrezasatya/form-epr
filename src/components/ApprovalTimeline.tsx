@@ -1,5 +1,5 @@
 import type { PrApproval } from "@prisma/client";
-import { fmtDateTime } from "@/lib/dates";
+import { fmtDate, fmtDateTime } from "@/lib/dates";
 
 const STYLE: Record<PrApproval["status"], [string, string]> = {
   MENUNGGU: ["Belum giliran", "bg-slate-300"],
@@ -25,10 +25,15 @@ export function ApprovalTimeline({ steps }: { steps: PrApproval[] }) {
             <div className="font-medium">{s.approverNama}</div>
             <div className="text-sm text-slate-600">
               {label}
-              {s.tanggal && <> · {fmtDateTime(s.tanggal)}</>}
+              {s.tanggal && <> · {s.sumber === "KERTAS" ? fmtDate(s.tanggal) : fmtDateTime(s.tanggal)}</>}
               {s.sumber === "KERTAS" && <> · approval kertas</>}
             </div>
             {s.catatan && <div className="mt-1 rounded bg-slate-50 p-2 text-sm text-slate-700">“{s.catatan}”</div>}
+            {s.scanFile && (
+              <a href={`/api/files/${s.scanFile}`} target="_blank" className="text-sm text-brand-700 underline">
+                📎 Scan approval
+              </a>
+            )}
           </li>
         );
       })}

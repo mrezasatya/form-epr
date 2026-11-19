@@ -10,6 +10,7 @@ import { fulfillmentDateOf, placementDays, realisasi, type StatusAction } from "
 import { ApprovalBadge, PriorityBadge, RequestBadge } from "@/components/StatusBadge";
 import { ApprovalTimeline } from "@/components/ApprovalTimeline";
 import { DecisionPanel } from "@/components/DecisionPanel";
+import { PaperApprovalPanel } from "@/components/PaperApprovalPanel";
 import { ProcessForm } from "@/components/recruitment/ProcessForm";
 import { CandidatesPanel } from "@/components/recruitment/CandidatesPanel";
 import { StatusActions } from "@/components/recruitment/StatusActions";
@@ -142,6 +143,9 @@ export default async function PrDetailPage({
           {isOwner && pr.statusPersetujuan === "DRAFT" && (
             <Link href={`/pr/baru?draft=${pr.id}`} className="btn btn-primary">Lanjutkan Draft</Link>
           )}
+          {pr.prNo && (
+            <a href={`/cetak/pr/${pr.id}`} target="_blank" className="btn btn-secondary">🖨 Cetak PR</a>
+          )}
           {user.canRequest && pr.statusPersetujuan !== "DRAFT" && (
             <Link href={`/pr/baru?dari=${pr.id}`} className="btn btn-secondary">Duplikat PR</Link>
           )}
@@ -149,6 +153,16 @@ export default async function PrDetailPage({
       </div>
 
       {myTurn && current && <DecisionPanel prId={pr.id} level={current.level} />}
+      {!myTurn && recruiter && current?.status === "PENDING" && pr.statusPersetujuan === "MENUNGGU_APPROVAL" && (
+        <PaperApprovalPanel
+          prId={pr.id}
+          level={current.level}
+          approverNama={current.approverNama}
+          approverPeran={current.approverPeran}
+          minDate={pr.tanggalPengajuan ? toIsoDate(pr.tanggalPengajuan) : null}
+          todayIso={todayIso}
+        />
+      )}
 
       <div className="grid gap-5 lg:grid-cols-3">
         <div className="space-y-5 lg:col-span-2">
