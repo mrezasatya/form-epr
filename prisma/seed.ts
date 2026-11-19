@@ -20,46 +20,41 @@ const prisma = new PrismaClient();
 async function main() {
   const withDummy = (process.env.SEED_DUMMY ?? "true") === "true";
 
-  for (const [kode, depts] of Object.entries(DIVISIONS)) {
-    await prisma.division.upsert({ where: { kode }, update: {}, create: { kode, nama: kode } });
-    for (const d of depts) {
-      await prisma.department.upsert({
-        where: { divisiKode_kode: { divisiKode: kode, kode: d } },
-        update: {},
-        create: { kode: d, divisiKode: kode },
-      });
-    }
-  }
-
+  // Insert per tabel sekaligus + skipDuplicates: cepat (juga ke database jauh seperti Neon) dan idempoten —
+  // data yang sudah ada (termasuk yang diubah Admin HR) tidak ditimpa.
+  await prisma.division.createMany({
+    data: Object.keys(DIVISIONS).map((kode) => ({ kode, nama: kode })),
+    skipDuplicates: true,
+  });
+  await prisma.department.createMany({
+    data: Object.entries(DIVISIONS).flatMap(([divisiKode, depts]) => depts.map((kode) => ({ kode, divisiKode }))),
+    skipDuplicates: true,
+  });
   let i = 0;
-  for (const [kelompok, list] of Object.entries(JURUSAN)) {
-    for (const nama of list) {
-      await prisma.masterJurusan.upsert({ where: { nama }, update: {}, create: { nama, kelompok, urutan: i++ } });
-    }
-  }
+  await prisma.masterJurusan.createMany({
+    data: Object.entries(JURUSAN).flatMap(([kelompok, list]) => list.map((nama) => ({ nama, kelompok, urutan: i++ }))),
+    skipDuplicates: true,
+  });
   i = 0;
-  for (const [kelompok, list] of Object.entries(SERTIFIKASI)) {
-    for (const nama of list) {
-      await prisma.masterSertifikasi.upsert({ where: { nama }, update: {}, create: { nama, kelompok, urutan: i++ } });
-    }
-  }
-  for (const nama of JABATAN) {
-    await prisma.masterJabatan.upsert({ where: { nama }, update: {}, create: { nama } });
-  }
-  for (const [tgl, keterangan] of HOLIDAYS_2026) {
-    const tanggal = new Date(`${tgl}T00:00:00Z`);
-    await prisma.holiday.upsert({ where: { tanggal }, update: { keterangan }, create: { tanggal, keterangan } });
-  }
-
+  await prisma.masterSertifikasi.createMany({
+    data: Object.entries(SERTIFIKASI).flatMap(([kelompok, list]) => list.map((nama) => ({ nama, kelompok, urutan: i++ }))),
+    skipDuplicates: true,
+  });
+  await prisma.masterJabatan.createMany({ data: JABATAN.map((nama) => ({ nama })), skipDuplicates: true });
+  await prisma.holiday.createMany({
+    data: HOLIDAYS_2026.map(([tgl, keterangan]) => ({ tanggal: new Date(`${tgl}T00:00:00Z`), keterangan })),
+    skipDuplicates: true,
+  });
   if ((await prisma.approvalRule.count()) === 0) {
-    for (const r of APPROVAL_RULES) {
-      await prisma.approvalRule.create({ data: { nama: r.nama, jobLevels: r.jobLevels, approvers: r.approvers } });
-    }
+    await prisma.approvalRule.createMany({
+      data: APPROVAL_RULES.map((r) => ({ nama: r.nama, jobLevels: r.jobLevels, approvers: r.approvers })),
+    });
   }
 
   if (withDummy) {
-    for (const e of EMPLOYEES) {
-      const data = {
+    await prisma.employee.createMany({
+      data: EMPLOYEES.map((e) => ({
+        nik: e.nik,
         nama: e.nama,
         jabatan: e.jabatan,
         jobLevel: e.jobLevel,
@@ -70,15 +65,14 @@ async function main() {
         roles: e.roles ?? [],
         isRequesterExtra: e.isRequesterExtra ?? false,
         extraDepartments: e.extraDepartments ?? [],
-      };
-      await prisma.employee.upsert({ where: { nik: e.nik }, update: data, create: { nik: e.nik, ...data } });
-    }
-    for (const [kode, nik] of Object.entries(KADIV)) {
-      await prisma.division.update({ where: { kode }, data: { kadivNik: nik } });
-    }
-    for (const [kode, nik] of Object.entries(DIREKTUR_PEMBINA)) {
-      await prisma.division.update({ where: { kode }, data: { direkturPembinaNik: nik } });
-    }
+      })),
+      skipDuplicates: true,
+    });
+    // Isi Kadiv & Direktur pembina hanya bila masih kosong (tidak menimpa pengaturan Admin HR)
+    for (const [kode, nik] of Object.entries(KADIV))
+      await prisma.division.updateMany({ where: { kode, kadivNik: null }, data: { kadivNik: nik } });
+    for (const [kode, nik] of Object.entries(DIREKTUR_PEMBINA))
+      await prisma.division.updateMany({ where: { kode, direkturPembinaNik: null }, data: { direkturPembinaNik: nik } });
   }
 
   console.log(`Seed selesai${withDummy ? " (dengan data dummy)" : ""}.`);
