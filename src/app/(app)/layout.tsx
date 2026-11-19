@@ -12,9 +12,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     where: { approverNik: user.nik, status: "PENDING", pr: { statusPersetujuan: "MENUNGGU_APPROVAL" } },
   });
 
+  const pendingRequests =
+    user.isRecruiter || user.isAdminHr ? await prisma.prActionRequest.count({ where: { status: "MENUNGGU" } }) : 0;
+
   const links = [
     { href: "/", label: "Beranda" },
     ...(user.canRequest ? [{ href: "/pr/baru", label: "Buat PR" }] : []),
+    ...(user.isRecruiter || user.isAdminHr ? [{ href: "/rekrutmen", label: "Dashboard Rekruter", badge: pendingRequests }] : []),
     { href: "/pr", label: user.isRecruiter || user.isAdminHr ? "Semua PR" : user.isKadiv ? "PR Divisi" : "PR Saya" },
     { href: "/approval", label: "Approval", badge: pendingApprovals },
     { href: "/notifikasi", label: "Notifikasi" },

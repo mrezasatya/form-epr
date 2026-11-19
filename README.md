@@ -32,7 +32,9 @@ Halaman login menampilkan pilihan akun. Skenario uji yang disarankan:
 | 2 | Agus Prasetyo (Kadiv PRO) | Menu Approval → Setujui |
 | 3 | Siti Rahmawati (Kadiv HRD / Kepala HRD) | Setujui → PR berstatus Disetujui / Open |
 | 4 | Agus Prasetyo | Buat PR Section Head → Approval 1 dilewati otomatis (pemohon = Kadiv) |
-| 5 | Adnan / Acha / Ami (Rekruter) | Lihat semua PR & log notifikasi |
+| 5 | Adnan (Rekruter) | Dashboard Rekruter → buka PR → isi Prioritas & PIC, tahap, kandidat |
+| 6 | Rudi Hartono | PR Saya → lihat progres, klik status untuk timeline, Ajukan Hold (+memo) |
+| 7 | Adnan | Eksekusi Hold → Unhold → kandidat Joined → Filled → Export Excel |
 
 ## Perintah
 
@@ -49,8 +51,10 @@ Halaman login menampilkan pilihan akun. Skenario uji yang disarankan:
 
 ```
 prisma/            skema database, migrasi, seed master data
-src/lib/           logika bisnis: approval.ts, prno.ts, dates.ts, pr-service.ts, pr-schema.ts
-src/app/(app)/     halaman setelah login: beranda, pr, pr/baru, pr/[id], approval, notifikasi
+src/lib/           logika bisnis: approval.ts, prno.ts, dates.ts, pr-service.ts, pr-schema.ts,
+                   recruitment.ts, recruitment-service.ts, recruiter-query.ts, storage.ts
+src/app/(app)/     halaman setelah login: beranda, pr, pr/baru, pr/[id], approval, rekrutmen, notifikasi
+src/app/api/       health check, export Excel, unduh file memo (dengan cek hak akses)
 src/app/login/     halaman login (mode dummy di prototype)
 src/components/    komponen UI (PrForm, TagInput, ApprovalTimeline, ...)
 tests/             unit test

@@ -1,17 +1,24 @@
 import type { ApprovalStatus, RequestStatus } from "@prisma/client";
+import { approvalStatusText, REQUEST_STATUS_LABEL } from "@/lib/status-labels";
 
-const PERSETUJUAN: Record<ApprovalStatus, [string, string]> = {
-  DRAFT: ["Draft", "bg-slate-100 text-slate-700"],
-  MENUNGGU_APPROVAL: ["Menunggu Approval", "bg-amber-100 text-amber-800"],
-  DISETUJUI: ["Disetujui", "bg-emerald-100 text-emerald-800"],
-  DITOLAK: ["Ditolak", "bg-red-100 text-red-700"],
+const PERSETUJUAN_CLS: Record<ApprovalStatus, string> = {
+  DRAFT: "bg-slate-100 text-slate-700",
+  MENUNGGU_APPROVAL: "bg-amber-100 text-amber-800",
+  DISETUJUI: "bg-emerald-100 text-emerald-800",
+  DITOLAK: "bg-red-100 text-red-700",
 };
 
-const PERMINTAAN: Record<RequestStatus, [string, string]> = {
-  OPEN: ["Open", "bg-blue-100 text-blue-800"],
-  ON_HOLD: ["On Hold", "bg-orange-100 text-orange-800"],
-  CANCELLED: ["Cancelled", "bg-slate-200 text-slate-700"],
-  FILLED: ["Filled", "bg-emerald-100 text-emerald-800"],
+const PERMINTAAN_CLS: Record<RequestStatus, string> = {
+  OPEN: "bg-blue-100 text-blue-800",
+  ON_HOLD: "bg-orange-100 text-orange-800",
+  CANCELLED: "bg-slate-200 text-slate-700",
+  FILLED: "bg-emerald-100 text-emerald-800",
+};
+
+export const PRIORITAS_CLS: Record<string, string> = {
+  High: "bg-red-100 text-red-700",
+  Medium: "bg-amber-100 text-amber-800",
+  Low: "bg-slate-100 text-slate-700",
 };
 
 export function ApprovalBadge({
@@ -23,15 +30,15 @@ export function ApprovalBadge({
   level?: number | null;
   approverPeran?: string | null;
 }) {
-  const [label, cls] = PERSETUJUAN[status];
-  const text = status === "MENUNGGU_APPROVAL" && level ? `Menunggu Approval ${level}${approverPeran ? ` – ${approverPeran}` : ""}` : label;
-  return <span className={`badge ${cls}`}>{text}</span>;
+  return <span className={`badge ${PERSETUJUAN_CLS[status]}`}>{approvalStatusText(status, level, approverPeran)}</span>;
 }
 
 export function RequestBadge({ status }: { status: RequestStatus | null }) {
   if (!status) return <span className="text-slate-400">—</span>;
-  const [label, cls] = PERMINTAAN[status];
-  return <span className={`badge ${cls}`}>{label}</span>;
+  return <span className={`badge ${PERMINTAAN_CLS[status]}`}>{REQUEST_STATUS_LABEL[status]}</span>;
 }
 
-export const requestStatusLabel = (s: RequestStatus | null) => (s ? PERMINTAAN[s][0] : "—");
+export function PriorityBadge({ value }: { value: string | null }) {
+  if (!value) return <span className="badge bg-red-50 text-red-600 ring-1 ring-red-200">Belum diisi</span>;
+  return <span className={`badge ${PRIORITAS_CLS[value] ?? ""}`}>{value}</span>;
+}

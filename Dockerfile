@@ -24,6 +24,7 @@ ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
 COPY --from=builder --chown=epr:epr /app/.next/standalone ./
 COPY --from=builder --chown=epr:epr /app/.next/static ./.next/static
 COPY --from=builder --chown=epr:epr /app/public ./public
+RUN mkdir -p /app/uploads && chown epr:epr /app/uploads
 USER epr
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD curl -fs http://localhost:3000/api/health || exit 1

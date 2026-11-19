@@ -42,12 +42,12 @@ model Employee {
 }
 
 model Division {
-  kode                String       @id
-  nama                String
-  kadivNik            String?
-  direkturPembinaNik  String?
-  departments         Department[]
-  employees           Employee[]
+  kode               String       @id
+  nama               String
+  kadivNik           String?
+  direkturPembinaNik String?
+  departments        Department[]
+  employees          Employee[]
 }
 
 model Department {
@@ -119,8 +119,8 @@ enum RequestStatus {
 }
 
 model PrRequest {
-  id    String  @id @default(cuid())
-  prNo  String? @unique
+  id   String  @id @default(cuid())
+  prNo String? @unique
 
   // Pemohon & organisasi
   requesterNik   String
@@ -161,6 +161,7 @@ model PrRequest {
   prioritas           String?
   recruiterPic        String?
   targetStartDate     DateTime?      @db.Date
+  fulfillmentDate     DateTime?      @db.Date
   alasanHold          String?
   estimasiSelesaiHold DateTime?      @db.Date
   progressNote        String?
@@ -175,6 +176,7 @@ model PrRequest {
   statusHistory     PrStatusHistory[]
   replacedEmployees PrReplacedEmployee[]
   notifications     NotificationLog[]
+  actionRequests    PrActionRequest[]
 
   @@index([requesterNik])
   @@index([divisiKode])
@@ -269,4 +271,26 @@ model NotificationLog {
   pr PrRequest? @relation(fields: [prId], references: [id], onDelete: SetNull)
 
   @@index([penerimaNik])
+}
+
+/// Pengajuan Hold / Unhold / Cancel oleh pemohon, dieksekusi rekruter (Spec 10.3)
+model PrActionRequest {
+  id              String    @id @default(cuid())
+  prId            String
+  jenis           String // HOLD | UNHOLD | CANCEL
+  alasan          String
+  estimasiSelesai DateTime? @db.Date
+  fileMemo        String?
+  status          String    @default("MENUNGGU") // MENUNGGU | DIPROSES | DITOLAK
+  olehNik         String
+  olehNama        String
+  tanggal         DateTime  @default(now())
+  diprosesOleh    String?
+  diprosesPada    DateTime?
+  catatanProses   String?
+
+  pr PrRequest @relation(fields: [prId], references: [id], onDelete: Cascade)
+
+  @@index([prId])
+  @@index([status])
 }

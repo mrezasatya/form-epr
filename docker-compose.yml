@@ -34,6 +34,7 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql://epr:${POSTGRES_PASSWORD:-epr}@db:5432/epr?schema=public
+      STORAGE_DIR: /app/uploads
     ports:
       - "${APP_PORT:-3000}:3000"
     volumes:
