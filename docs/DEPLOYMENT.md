@@ -152,3 +152,16 @@ Simpan salinan backup di lokasi lain (NAS/server berbeda). **Uji restore minimal
 - Akses dibatasi peran di sisi server; file hanya bisa diunduh oleh pengguna yang berhak atas PR terkait.
 - Audit trail: perubahan status PR, data rekrutmen, master data, konfigurasi, dan aktivitas login.
 - Perlu ditetapkan bersama DPO/Legal: masa retensi data PR & kandidat, serta siapa yang boleh mengakses database.
+
+## 10. Prototype online di Vercel (untuk demo & validasi, BUKAN production)
+
+Dipakai agar HRD dan atasan bisa mencoba alur lewat link sebelum server internal siap. Data **dummy saja**.
+
+| Item | Pengaturan Vercel |
+|---|---|
+| Database | Neon Postgres dari Vercel Marketplace (region Singapura), dihubungkan ke project → variabel `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `POSTGRES_PRISMA_URL` terisi otomatis |
+| Build | `vercel.json` → `scripts/vercel-build.sh` (migrasi + seed dummy + build) |
+| Env | `AUTH_MODE=dummy`, `MAIL_MODE=log`, `SEED_DUMMY=true`, `JOBS_ENABLED=false`, `STORAGE_DIR=/tmp/epr-uploads`, `COOKIE_SECURE=true`, `SESSION_SECRET` acak |
+
+Keterbatasan: file memo/scan hanya sementara (disk serverless tidak permanen), worker email & pengingat tidak berjalan,
+dan siapa pun yang memegang link bisa masuk sebagai akun dummy mana pun. Jangan memasukkan data karyawan asli.

@@ -6,6 +6,7 @@ Web app untuk mengajukan, menyetujui, dan memantau permintaan tenaga kerja (e-PR
 - Fase pengembangan & status: [`docs/ROADMAP.md`](docs/ROADMAP.md)
 - Deployment ke server internal: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 - Checklist & pertanyaan go-live: [`docs/GO-LIVE.md`](docs/GO-LIVE.md)
+- Dokumen rapat koordinasi IT: [`docs/RAPAT-IT.md`](docs/RAPAT-IT.md)
 
 **Stack:** Next.js 15 (App Router, TypeScript) · PostgreSQL 16 · Prisma · Tailwind CSS · Docker Compose.
 
