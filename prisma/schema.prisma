@@ -1,0 +1,272 @@
+// Skema database e-PR. Acuan: docs/SPEC_ePR.md Lampiran E.
+// Database: PostgreSQL (sama untuk prototype dan production / server internal).
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Master data
+// ---------------------------------------------------------------------------
+
+model Employee {
+  nik              String   @id
+  nama             String
+  jabatan          String
+  jobLevel         String // Clerical ... Division Head, Director
+  divisiKode       String
+  departemenKode   String
+  email            String?
+  atasanNik        String?
+  /// Peran sistem: ADMIN_HR, RECRUITER, KEPALA_HRD, DIREKTUR_UTAMA
+  roles            String[] @default([])
+  /// Hak pemohon tambahan (Section Head / PM) yang diberikan Admin HR
+  isRequesterExtra Boolean  @default(false)
+  /// Departemen tambahan yang boleh diajukan (selain departemen sendiri)
+  extraDepartments String[] @default([])
+  aktif            Boolean  @default(true)
+  /// Hash password untuk mode login "local" (opsi b). Kosong untuk mode ESS/LDAP.
+  passwordHash     String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  division Division @relation(fields: [divisiKode], references: [kode])
+
+  @@index([divisiKode])
+}
+
+model Division {
+  kode                String       @id
+  nama                String
+  kadivNik            String?
+  direkturPembinaNik  String?
+  departments         Department[]
+  employees           Employee[]
+}
+
+model Department {
+  id         Int      @id @default(autoincrement())
+  kode       String
+  divisiKode String
+  division   Division @relation(fields: [divisiKode], references: [kode])
+
+  @@unique([divisiKode, kode])
+}
+
+model MasterJurusan {
+  id       Int    @id @default(autoincrement())
+  nama     String @unique
+  kelompok String // UMUM | SMA_SMK | PT
+  urutan   Int    @default(0)
+}
+
+model MasterSertifikasi {
+  id       Int    @id @default(autoincrement())
+  nama     String @unique
+  kelompok String
+  urutan   Int    @default(0)
+}
+
+model MasterJabatan {
+  id   Int    @id @default(autoincrement())
+  nama String @unique
+}
+
+model Holiday {
+  tanggal    DateTime @id @db.Date
+  keterangan String
+}
+
+/// Matriks approval yang dikonfigurasi Admin HR (Spec 7.1)
+model ApprovalRule {
+  id               Int      @id @default(autoincrement())
+  nama             String
+  jobLevels        String[]
+  divisiKode       String?
+  statusEmployment String?
+  jenisKebutuhan   String?
+  /// Array 1..3 berisi { type: "ROLE" | "PERSON", value: string }
+  approvers        Json
+  /// Tie-breaker bila spesifisitas sama (angka lebih besar = didahulukan)
+  prioritas        Int      @default(0)
+  aktif            Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Transaksi PR
+// ---------------------------------------------------------------------------
+
+enum ApprovalStatus {
+  DRAFT
+  MENUNGGU_APPROVAL
+  DISETUJUI
+  DITOLAK
+}
+
+enum RequestStatus {
+  OPEN
+  ON_HOLD
+  CANCELLED
+  FILLED
+}
+
+model PrRequest {
+  id    String  @id @default(cuid())
+  prNo  String? @unique
+
+  // Pemohon & organisasi
+  requesterNik   String
+  requesterNama  String
+  divisiKode     String
+  departemenKode String
+
+  // Isian form (Spec 5.1)
+  jobTitle            String
+  jobLevel            String
+  jobResponsibilities String
+  lokasiKerja         String
+  levelPendidikan     String
+  jurusan             String[]
+  pengalaman          String
+  hardSkills          String[]
+  softSkills          String[]
+  sertifikasiWajib    Boolean
+  sertifikasi         String[]
+  statusEmployment    String
+  durationContract    String
+  durationOthers      String?
+  kebutuhan           Int
+  jenisKebutuhan      String
+  expectedDate        DateTime  @db.Date
+  tanggalPengajuan    DateTime? @db.Date
+  remarks             String?
+
+  // Approval
+  statusPersetujuan ApprovalStatus @default(DRAFT)
+  currentLevel      Int? // level approval yang sedang ditunggu
+  approvalRuleId    Int?
+  prReceivedDate    DateTime?      @db.Date
+
+  // Proses rekrutmen (diisi rekruter — Fase 2)
+  statusPermintaan    RequestStatus?
+  tahapDetail         String?
+  prioritas           String?
+  recruiterPic        String?
+  targetStartDate     DateTime?      @db.Date
+  alasanHold          String?
+  estimasiSelesaiHold DateTime?      @db.Date
+  progressNote        String?
+  note                String?
+
+  duplicatedFromId String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  approvals         PrApproval[]
+  candidates        PrCandidate[]
+  statusHistory     PrStatusHistory[]
+  replacedEmployees PrReplacedEmployee[]
+  notifications     NotificationLog[]
+
+  @@index([requesterNik])
+  @@index([divisiKode])
+  @@index([statusPersetujuan])
+}
+
+enum ApprovalStepStatus {
+  MENUNGGU // belum giliran
+  PENDING // sedang menunggu keputusan approver ini
+  DISETUJUI
+  DITOLAK
+  DILEWATI // approver = pemohon (skip otomatis)
+  DIBATALKAN // tidak diproses karena PR ditolak di level sebelumnya
+}
+
+model PrApproval {
+  id            String             @id @default(cuid())
+  prId          String
+  level         Int
+  approverNik   String?
+  approverNama  String
+  approverPeran String // label peran, mis. "Kepala HRD"
+  status        ApprovalStepStatus @default(MENUNGGU)
+  tanggal       DateTime?
+  catatan       String?
+  sumber        String             @default("SISTEM") // SISTEM | KERTAS
+  scanFile      String?
+
+  pr PrRequest @relation(fields: [prId], references: [id], onDelete: Cascade)
+
+  @@unique([prId, level])
+  @@index([approverNik, status])
+}
+
+model PrCandidate {
+  id          String    @id @default(cuid())
+  prId        String
+  nama        String
+  sumber      String
+  status      String // Offer Accepted | Joined | Batal
+  tanggalJoin DateTime? @db.Date
+  createdAt   DateTime  @default(now())
+
+  pr PrRequest @relation(fields: [prId], references: [id], onDelete: Cascade)
+}
+
+/// Riwayat aksi / audit trail per PR
+model PrStatusHistory {
+  id       String   @id @default(cuid())
+  prId     String
+  aksi     String // SUBMIT, APPROVE, REJECT, SKIP, HOLD, UNHOLD, CANCEL, FILLED, UPDATE, ...
+  dari     String?
+  ke       String?
+  olehNik  String?
+  olehNama String?
+  tanggal  DateTime @default(now())
+  alasan   String?
+  fileMemo String?
+
+  pr PrRequest @relation(fields: [prId], references: [id], onDelete: Cascade)
+
+  @@index([prId])
+}
+
+model PrReplacedEmployee {
+  id   String  @id @default(cuid())
+  prId String
+  nik  String?
+  nama String
+
+  pr PrRequest @relation(fields: [prId], references: [id], onDelete: Cascade)
+}
+
+/// Nomor urut PR per tahun (reset tiap 1 Januari) — Spec Bagian 6
+model PrCounter {
+  tahun         Int @id
+  nomorTerakhir Int @default(0)
+}
+
+model NotificationLog {
+  id          String   @id @default(cuid())
+  prId        String?
+  penerimaNik String?
+  penerima    String // email / nama
+  jenis       String
+  subjek      String
+  isi         String
+  link        String?
+  waktu       DateTime @default(now())
+  statusKirim String   @default("SIMULASI") // SIMULASI | TERKIRIM | GAGAL
+
+  pr PrRequest? @relation(fields: [prId], references: [id], onDelete: SetNull)
+
+  @@index([penerimaNik])
+}

@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #eef6ff;
+  --color-brand-100: #d9eaff;
+  --color-brand-600: #1d5fbf;
+  --color-brand-700: #174c99;
+  --color-brand-800: #133d7a;
+  /* Font sistem: tidak memerlukan akses internet (aman di jaringan internal). */
+  --font-sans: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+body {
+  background: #f4f6f9;
+  color: #1f2937;
+}
+
+@layer components {
+  .card { @apply rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5; }
+  .label { @apply mb-1 block text-sm font-medium text-slate-700; }
+  .req::after { content: " *"; @apply text-red-600; }
+  .input {
+    @apply block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900
+      focus:border-brand-600 focus:ring-2 focus:ring-brand-100 focus:outline-none
+      disabled:bg-slate-100 disabled:text-slate-500 sm:text-sm;
+  }
+  .input-error { @apply border-red-500 focus:border-red-500 focus:ring-red-100; }
+  .field-error { @apply mt-1 text-sm text-red-600; }
+  .hint { @apply mt-1 text-xs text-slate-500; }
+  .btn {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold
+      transition disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary { @apply bg-brand-600 text-white hover:bg-brand-700; }
+  .btn-secondary { @apply border border-slate-300 bg-white text-slate-700 hover:bg-slate-50; }
+  .btn-danger { @apply bg-red-600 text-white hover:bg-red-700; }
+  .btn-success { @apply bg-emerald-600 text-white hover:bg-emerald-700; }
+  .badge { @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap; }
+  .chip { @apply inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 text-sm text-brand-800; }
+  .page-title { @apply text-xl font-bold text-slate-900 sm:text-2xl; }
+}

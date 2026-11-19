@@ -1,0 +1,46 @@
+# Menjalankan e-PR lengkap (database + aplikasi) di satu server.
+#   1. cp .env.example .env   lalu sesuaikan (SESSION_SECRET, APP_URL, POSTGRES_PASSWORD)
+#   2. docker compose up -d --build
+# Bila IT menyediakan PostgreSQL sendiri: hapus service "db" dan arahkan DATABASE_URL ke server tersebut.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: epr
+      POSTGRES_USER: epr
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-epr}
+    volumes:
+      - epr-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U epr -d epr"]
+      interval: 5s
+      retries: 10
+
+  # Menjalankan migrasi skema (+ seed master data) lalu selesai.
+  migrate:
+    build: { context: ., target: tools }
+    environment:
+      DATABASE_URL: postgresql://epr:${POSTGRES_PASSWORD:-epr}@db:5432/epr?schema=public
+      SEED_DUMMY: ${SEED_DUMMY:-true}
+    command: sh -c "npx prisma migrate deploy && npx prisma db seed"
+    depends_on:
+      db: { condition: service_healthy }
+
+  app:
+    build: { context: ., target: runner }
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://epr:${POSTGRES_PASSWORD:-epr}@db:5432/epr?schema=public
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    volumes:
+      - epr-uploads:/app/uploads
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+volumes:
+  epr-db:
+  epr-uploads:
