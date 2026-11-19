@@ -22,6 +22,16 @@ export type ReportPr = {
   approvals: { level: number; status: string; tanggal: Date | null; approverNama: string; approverPeran: string }[];
 };
 
+/** Sejak kapan approver saat ini menunggu: keputusan level sebelumnya terakhir, atau Tanggal Pengajuan. */
+export function approvalWaitingSince(
+  approvals: { level: number; tanggal: Date | null }[],
+  currentLevel: number,
+  tanggalPengajuan: Date,
+): Date {
+  const prev = approvals.filter((a) => a.level < currentLevel && a.tanggal).map((a) => todayWib(a.tanggal!).getTime());
+  return prev.length ? new Date(Math.max(...prev, tanggalPengajuan.getTime())) : tanggalPengajuan;
+}
+
 export type Avg = { key: string; avg: number; n: number };
 
 function groupAvg(items: { key: string; value: number }[]): Avg[] {
@@ -84,10 +94,7 @@ export function computeReport(
     .filter((p) => p.statusPersetujuan === "MENUNGGU_APPROVAL" && p.currentLevel !== null)
     .map((p) => {
       const step = p.approvals.find((a) => a.level === p.currentLevel)!;
-      const prevDates = p.approvals
-        .filter((a) => a.level < p.currentLevel! && a.tanggal)
-        .map((a) => todayWib(a.tanggal!).getTime());
-      const since = prevDates.length ? new Date(Math.max(...prevDates)) : p.tanggalPengajuan!;
+      const since = approvalWaitingSince(p.approvals, p.currentLevel!, p.tanggalPengajuan!);
       return { pr: p, step, since, waiting: businessDaysBetween(since, today, holidays) };
     })
     .filter((x) => x.step && x.waiting > opts.reminderDays)

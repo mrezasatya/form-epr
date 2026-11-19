@@ -16,25 +16,32 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 model Employee {
-  nik              String   @id
-  nama             String
-  jabatan          String
-  jobLevel         String // Clerical ... Division Head, Director
-  divisiKode       String
-  departemenKode   String
-  email            String?
-  atasanNik        String?
+  nik                String    @id
+  nama               String
+  jabatan            String
+  jobLevel           String // Clerical ... Division Head, Director
+  divisiKode         String
+  departemenKode     String
+  email              String?
+  atasanNik          String?
   /// Peran sistem: ADMIN_HR, RECRUITER, KEPALA_HRD, DIREKTUR_UTAMA
-  roles            String[] @default([])
+  roles              String[]  @default([])
   /// Hak pemohon tambahan (Section Head / PM) yang diberikan Admin HR
-  isRequesterExtra Boolean  @default(false)
+  isRequesterExtra   Boolean   @default(false)
   /// Departemen tambahan yang boleh diajukan (selain departemen sendiri)
-  extraDepartments String[] @default([])
-  aktif            Boolean  @default(true)
+  extraDepartments   String[]  @default([])
+  aktif              Boolean   @default(true)
   /// Hash password untuk mode login "local" (opsi b). Kosong untuk mode ESS/LDAP.
-  passwordHash     String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  passwordHash       String?
+  /// Wajib ganti password saat login berikutnya (setelah reset oleh Admin HR)
+  mustChangePassword Boolean   @default(false)
+  failedLogins       Int       @default(0)
+  lockedUntil        DateTime?
+  /// Dinaikkan saat ganti/reset password → semua sesi lama otomatis tidak berlaku
+  sessionVersion     Int       @default(0)
+  lastLoginAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   division Division @relation(fields: [divisiKode], references: [kode])
 
@@ -193,17 +200,20 @@ enum ApprovalStepStatus {
 }
 
 model PrApproval {
-  id            String             @id @default(cuid())
-  prId          String
-  level         Int
-  approverNik   String?
-  approverNama  String
-  approverPeran String // label peran, mis. "Kepala HRD"
-  status        ApprovalStepStatus @default(MENUNGGU)
-  tanggal       DateTime?
-  catatan       String?
-  sumber        String             @default("SISTEM") // SISTEM | KERTAS
-  scanFile      String?
+  id             String             @id @default(cuid())
+  prId           String
+  level          Int
+  approverNik    String?
+  approverNama   String
+  approverPeran  String // label peran, mis. "Kepala HRD"
+  status         ApprovalStepStatus @default(MENUNGGU)
+  tanggal        DateTime?
+  catatan        String?
+  sumber         String             @default("SISTEM") // SISTEM | KERTAS
+  scanFile       String?
+  /// Pengingat email approval tertunda (Spec 8)
+  lastReminderAt DateTime?
+  reminderCount  Int                @default(0)
 
   pr PrRequest @relation(fields: [prId], references: [id], onDelete: Cascade)
 
@@ -257,20 +267,26 @@ model PrCounter {
 }
 
 model NotificationLog {
-  id          String   @id @default(cuid())
-  prId        String?
-  penerimaNik String?
-  penerima    String // email / nama
-  jenis       String
-  subjek      String
-  isi         String
-  link        String?
-  waktu       DateTime @default(now())
-  statusKirim String   @default("SIMULASI") // SIMULASI | TERKIRIM | GAGAL
+  id                String    @id @default(cuid())
+  prId              String?
+  penerimaNik       String?
+  penerima          String // email / nama
+  jenis             String
+  subjek            String
+  isi               String
+  link              String?
+  waktu             DateTime  @default(now())
+  statusKirim       String    @default("SIMULASI") // SIMULASI | ANTRE | TERKIRIM | GAGAL
+  percobaan         Int       @default(0)
+  errorTerakhir     String?
+  terkirimPada      DateTime?
+  /// Waktu percobaan kirim terakhir (untuk jeda percobaan ulang)
+  percobaanTerakhir DateTime?
 
   pr PrRequest? @relation(fields: [prId], references: [id], onDelete: SetNull)
 
   @@index([penerimaNik])
+  @@index([statusKirim])
 }
 
 /// Pengajuan Hold / Unhold / Cancel oleh pemohon, dieksekusi rekruter (Spec 10.3)

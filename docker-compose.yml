@@ -29,7 +29,11 @@ services:
       db: { condition: service_healthy }
 
   app:
-    build: { context: ., target: runner }
+    build:
+      context: .
+      target: runner
+      args:
+        SERVER_ACTIONS_ALLOWED_ORIGINS: ${SERVER_ACTIONS_ALLOWED_ORIGINS:-}
     restart: unless-stopped
     env_file: .env
     environment:

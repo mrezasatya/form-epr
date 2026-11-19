@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth/session";
+import { authMode, requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { logout } from "@/app/actions/auth";
 import { NavLinks } from "@/components/NavLinks";
@@ -48,6 +48,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <div className="text-sm font-medium">{user.nama}</div>
               <div className="text-xs text-slate-500">{peran.join(" · ") || user.jabatan}</div>
             </div>
+            {authMode() === "local" && (
+              <Link href="/akun/password" className="hidden text-xs text-slate-500 hover:underline sm:inline">Ganti password</Link>
+            )}
             <form action={logout}>
               <button className="btn btn-secondary min-h-9 px-3 py-1.5 text-xs">Keluar</button>
             </form>
@@ -55,7 +58,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
         <NavLinks links={links} />
       </header>
-      {process.env.AUTH_MODE !== "ldap" && process.env.AUTH_MODE !== "local" && (
+      {authMode() === "dummy" && (
         <div className="bg-amber-100 px-4 py-1 text-center text-xs text-amber-900">
           PROTOTYPE — data dummy, email disimulasikan di menu Notifikasi
         </div>

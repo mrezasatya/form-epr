@@ -19,6 +19,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             { href: "/admin/approval", label: "Matriks Approval" },
             { href: "/admin/libur", label: "Hari Libur" },
             { href: "/admin/master", label: "Jurusan · Sertifikasi · Jabatan" },
+            { href: "/admin/impor", label: "Impor Karyawan" },
+            { href: "/admin/sistem", label: "Sistem & Audit" },
           ]}
         />
       </div>

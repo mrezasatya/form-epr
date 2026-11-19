@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { fmtDateTime } from "@/lib/dates";
 import { EmployeeForm } from "@/components/admin/EmployeeForm";
+import { ResetPasswordPanel } from "@/components/admin/ResetPasswordPanel";
+import { authMode } from "@/lib/auth/session";
 
 export const metadata = { title: "Karyawan · Admin HR" };
 
@@ -20,6 +22,13 @@ export default async function EmployeeEditPage({ params }: { params: Promise<{ n
       <Link href="/admin/karyawan" className="text-sm text-brand-700 hover:underline">← Daftar karyawan</Link>
       <h2 className="text-lg font-semibold">{isNew ? "Tambah Karyawan" : `${employee!.nama} (${employee!.nik})`}</h2>
       <EmployeeForm employee={employee} departments={departments} />
+      {employee && authMode() === "local" && (
+        <ResetPasswordPanel
+          nik={employee.nik}
+          hasPassword={!!employee.passwordHash}
+          locked={!!employee.lockedUntil && employee.lockedUntil > new Date()}
+        />
+      )}
       {logs.length > 0 && (
         <section className="card text-sm">
           <h3 className="mb-2 font-semibold">Riwayat perubahan</h3>

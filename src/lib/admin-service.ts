@@ -4,6 +4,7 @@ import { prisma } from "./db";
 import type { CurrentUser } from "./auth/session";
 import { APPROVER_ROLES, EMPLOYEE_JOB_LEVELS, JENIS_KEBUTUHAN, JOB_LEVELS, ROLES, STATUS_EMPLOYMENT } from "./constants";
 import { parseIsoDate, toIsoDate } from "./dates";
+import { generateTempPassword, hashPassword } from "./auth/password";
 
 type User = NonNullable<CurrentUser>;
 export type AdminResult = { ok: true; message?: string; id?: string } | { ok: false; message: string };
@@ -244,4 +245,30 @@ export async function deleteMaster(user: User, kind: MasterKind, id: number): Pr
     await audit(user, `MASTER_${kind.toUpperCase()}`, before.nama, "DELETE");
     return { ok: true, message: `"${before.nama}" dihapus.` };
   });
+}
+
+// ---------------------------------------------------------------------------
+// Reset password (AUTH_MODE=local) — password sementara ditampilkan SEKALI ke Admin HR
+// ---------------------------------------------------------------------------
+
+export async function resetPassword(user: User, nik: string): Promise<AdminResult & { tempPassword?: string }> {
+  let temp = "";
+  const r = await adminOnly(user, async () => {
+    const emp = await prisma.employee.findUnique({ where: { nik } });
+    if (!emp) fail("Karyawan tidak ditemukan.");
+    temp = generateTempPassword();
+    await prisma.employee.update({
+      where: { nik },
+      data: {
+        passwordHash: await hashPassword(temp),
+        mustChangePassword: true,
+        failedLogins: 0,
+        lockedUntil: null,
+        sessionVersion: { increment: 1 },
+      },
+    });
+    await audit(user, "EMPLOYEE", nik, "RESET_PASSWORD");
+    return { ok: true, message: "Password sementara dibuat." };
+  });
+  return r.ok ? { ...r, tempPassword: temp } : r;
 }

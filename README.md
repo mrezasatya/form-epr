@@ -5,6 +5,7 @@ Web app untuk mengajukan, menyetujui, dan memantau permintaan tenaga kerja (e-PR
 - Spesifikasi fungsional: [`docs/SPEC_ePR.md`](docs/SPEC_ePR.md)
 - Fase pengembangan & status: [`docs/ROADMAP.md`](docs/ROADMAP.md)
 - Deployment ke server internal: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+- Checklist & pertanyaan go-live: [`docs/GO-LIVE.md`](docs/GO-LIVE.md)
 
 **Stack:** Next.js 15 (App Router, TypeScript) · PostgreSQL 16 · Prisma · Tailwind CSS · Docker Compose.
 
@@ -45,6 +46,9 @@ Halaman login menampilkan pilihan akun. Skenario uji yang disarankan:
 | `npm run dev` | Mode pengembangan |
 | `npm run build && npm start` | Build & jalankan production |
 | `npm test` | Unit test (hari kerja, PR NO, matriks approval, rekrutmen, laporan) |
+| `npm run test:integration` | Uji integrasi: email SMTP, pengingat, login LDAP (butuh DB dev + `bash tests/integration/slapd-setup.sh`) |
+| `npm run admin:create -- --nik <NIK> --nama "<Nama>"` | Buat / pulihkan akun Admin HR |
+| `./scripts/backup.sh` · `./scripts/restore.sh` | Backup & pemulihan (lihat DEPLOYMENT.md) |
 | `npm run lint` / `npm run typecheck` | Pemeriksaan kode |
 | `npm run db:migrate` | Buat migrasi baru setelah mengubah `prisma/schema.prisma` |
 | `npm run db:reset` | Kosongkan & isi ulang database (hanya dev) |
@@ -60,5 +64,6 @@ src/app/cetak/     halaman Cetak PR (A4, simpan sebagai PDF)
 src/app/api/       health check, export Excel, unduh file memo (dengan cek hak akses)
 src/app/login/     halaman login (mode dummy di prototype)
 src/components/    komponen UI (PrForm, TagInput, ApprovalTimeline, ...)
-tests/             unit test
+tests/             unit test, tests/integration (SMTP, LDAP), tests/e2e (skrip Playwright)
+scripts/           create-admin, backup, restore
 ```

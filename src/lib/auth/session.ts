@@ -14,8 +14,8 @@ function secret() {
   return new TextEncoder().encode(s);
 }
 
-export async function createSession(nik: string) {
-  const token = await new SignJWT({ nik })
+export async function createSession(nik: string, sessionVersion = 0) {
+  const token = await new SignJWT({ nik, sv: sessionVersion })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(`${MAX_AGE}s`)
@@ -33,12 +33,12 @@ export async function destroySession() {
   (await cookies()).delete(COOKIE);
 }
 
-async function sessionNik(): Promise<string | null> {
+async function sessionClaims(): Promise<{ nik: string; sv: number } | null> {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, secret());
-    return typeof payload.nik === "string" ? payload.nik : null;
+    const { payload } = await jwtVerify(token, secret(), { algorithms: ["HS256"] });
+    return typeof payload.nik === "string" ? { nik: payload.nik, sv: typeof payload.sv === "number" ? payload.sv : 0 } : null;
   } catch {
     return null;
   }
@@ -46,9 +46,10 @@ async function sessionNik(): Promise<string | null> {
 
 export type CurrentUser = Awaited<ReturnType<typeof loadUser>>;
 
-async function loadUser(nik: string) {
+async function loadUser(nik: string, sv: number) {
   const emp = await prisma.employee.findUnique({ where: { nik }, include: { division: true } });
-  if (!emp || !emp.aktif) return null;
+  // Sesi tidak berlaku bila akun nonaktif atau password sudah diganti/di-reset (sessionVersion naik).
+  if (!emp || !emp.aktif || emp.sessionVersion !== sv) return null;
   const isKadiv = emp.division.kadivNik === emp.nik;
   return {
     ...emp,
@@ -61,13 +62,14 @@ async function loadUser(nik: string) {
 }
 
 export async function getCurrentUser() {
-  const nik = await sessionNik();
-  return nik ? loadUser(nik) : null;
+  const c = await sessionClaims();
+  return c ? loadUser(c.nik, c.sv) : null;
 }
 
 export async function requireUser() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  if (user.mustChangePassword && authMode() === "local") redirect("/akun/password?wajib=1");
   return user;
 }
 

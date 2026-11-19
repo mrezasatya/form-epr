@@ -8,10 +8,11 @@ import { computeReport } from "@/lib/reports";
 import { fmtDate, parseIsoDate, todayWib, toIsoDate } from "@/lib/dates";
 import { RECRUITER_PIC } from "@/lib/constants";
 import { HBarChart } from "@/components/HBarChart";
+import { reminderBusinessDays } from "@/lib/settings";
 
 export const metadata = { title: "Laporan & Metrik" };
 
-const REMINDER_DAYS = 3; // [KONFIRMASI] Spec 14 #8
+const REMINDER_DAYS = reminderBusinessDays();
 
 const pct = (r: number | null) => (r === null ? "—" : `${(r * 100).toLocaleString("id-ID", { maximumFractionDigits: 1 })}%`);
 const num = (v: number | null, d = 1) => (v === null ? "—" : v.toLocaleString("id-ID", { maximumFractionDigits: d }));

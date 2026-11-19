@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { authMode } from "@/lib/auth/session";
 import { loginDummy } from "@/app/actions/auth";
+import { PasswordLoginForm } from "@/components/PasswordLoginForm";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Masuk" };
@@ -63,9 +64,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           })}
         </div>
       ) : (
-        <div className="card text-sm text-slate-600">
-          Mode login <b>{mode}</b> (NIK + password ESS) akan diaktifkan pada Fase 4 setelah koordinasi dengan IT.
-        </div>
+        <PasswordLoginForm next={next ?? "/"} mode={mode} />
       )}
     </main>
   );

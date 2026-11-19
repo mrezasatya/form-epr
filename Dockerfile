@@ -12,7 +12,8 @@ COPY . .
 RUN npx prisma generate
 
 FROM tools AS builder
-ENV NEXT_TELEMETRY_DISABLED=1
+ARG SERVER_ACTIONS_ALLOWED_ORIGINS=""
+ENV NEXT_TELEMETRY_DISABLED=1 SERVER_ACTIONS_ALLOWED_ORIGINS=$SERVER_ACTIONS_ALLOWED_ORIGINS
 RUN npm run build
 
 # Tahap runtime: hanya server Next.js standalone (kecil, tanpa source code).

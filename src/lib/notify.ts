@@ -5,8 +5,8 @@ import type { Tx } from "./db";
 /**
  * Notifikasi email (Spec Bagian 8).
  * - MAIL_MODE=log  : email hanya dicatat di tabel NotificationLog (prototype; tampil di menu Notifikasi).
- * - MAIL_MODE=smtp : [Fase 4] pengirim (worker) membaca log berstatus ANTRE dan mengirim via SMTP
- *   perusahaan. Pola "outbox" ini menjamin email tidak terkirim bila transaksi gagal.
+ * - MAIL_MODE=smtp : baris berstatus ANTRE dikirim oleh worker (src/lib/jobs.ts) via SMTP perusahaan.
+ *   Pola "outbox" ini menjamin email tidak terkirim bila transaksi gagal, dan dicoba ulang bila SMTP down.
  */
 export async function notify(
   tx: Tx,
